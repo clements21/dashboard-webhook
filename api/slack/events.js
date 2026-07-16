@@ -1,17 +1,27 @@
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  // Parser le body
+  let body;
+  if (typeof req.body === 'string') {
+    body = JSON.parse(req.body);
+  } else if (req.body instanceof Buffer) {
+    body = JSON.parse(req.body.toString());
+  } else {
+    body = req.body;
+  }
+
   const { type, challenge, event } = body;
 
-  console.log('📨 Événement reçu:', type);
+  console.log('📨 Événement reçu:', type, 'Challenge:', challenge);
 
-  // Vérification Slack
+  // Vérification Slack (CRITIQUE)
   if (type === 'url_verification') {
-    console.log('✓ Slack verification réussi');
-    return res.json({ challenge });
+    console.log('✓ Slack verification - envoi challenge:', challenge);
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).json({ challenge: challenge });
   }
 
   // Traiter les messages
@@ -28,7 +38,6 @@ export default function handler(req, res) {
 
     if (email) {
       console.log(`✓ Lead importé: ${email} | ${campagne}`);
-      // À ce stade, tu peux ajouter la sauvegarde en DB
     }
   }
 
