@@ -1,0 +1,38 @@
+STRUCTURE DES FICHIERS POUR GITHUB
+===================================
+
+dashboard-webhook/
+├── api/
+│   └── slack/
+│       └── events.js          (copie le contenu de events.js)
+├── package.json               (à la racine)
+├── vercel.json                (à la racine)
+├── README.md                  (à la racine)
+└── .gitignore                 (à la racine)
+
+ÉTAPES D'UPLOAD SUR GITHUB
+==========================
+
+1. Va sur https://github.com/new
+   - Repository name: dashboard-webhook
+   - Public
+   - Clique "Create repository"
+
+2. Va sur ton repo, clique "Add file" → "Upload files"
+
+3. Upload les fichiers DANS LE BON DOSSIER :
+
+   ✓ À la racine (drag and drop directement) :
+     - package.json
+     - vercel.json
+     - README.md
+     - .gitignore
+
+   ✓ Dans api/slack/ (crée d'abord le dossier) :
+     - events.js
+
+4. Commit
+
+5. Va sur Vercel, import le repo
+
+C'est tout !
