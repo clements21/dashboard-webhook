@@ -38,8 +38,8 @@ export default async function handler(req, res) {
     const emailMatch = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
     const email = emailMatch?.[1];
 
-    // Extract campaign entre "Campaign:" et la ligne suivante
-    const campaignMatch = text.match(/Campaign:\s*"?([^"\n]+)"?/);
+    // Extract campaign: cherche "Campaign:" puis la ligne avec les guillemets
+    const campaignMatch = text.match(/Campaign:\s*\n\s*"([^"]+)"/m);
     const campagne = campaignMatch?.[1]?.trim() || 'Unknown';
 
     console.log(`🔍 Parsed: email=${email}, campaign=${campagne}`);
