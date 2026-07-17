@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-console.log('🔧 SUPABASE OK:', process.env.SUPABASE_URL ? '✓' : '❌');
-
 export default async function handler(req, res) {
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -26,32 +24,45 @@ export default async function handler(req, res) {
   if (event?.type === 'message' && !event.bot_id) {
     const text = event.text || '';
     
-    // Extract email
-    const emailMatch = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+    // 1. Extract Lead (email)
+    const emailMatch = text.match(/Lead:\s*\n?\s*\[?([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)\]?/);
     const email = emailMatch?.[1];
 
-    // Extract campaign - cherche tout ce qui est entre "Campaign:" et la fin ou la prochaine balise
+    // 2. Extract Campaign
     let campagne = 'Unknown';
-    const campaignMatch = text.match(/Campaign:\s*\n?\s*"?([^"\n]+)"?/);
+    const campaignMatch = text.match(/Campaign:\s*\n?\s*"([^"]+)"/);
     if (campaignMatch?.[1]) {
       campagne = campaignMatch[1].trim();
     }
 
-    console.log(`📧 ${email} | ${campagne}`);
+    // 3. Extract Message
+    let message = '';
+    const messageMatch = text.match(/Message:\s*\n?\s*(.+?)(?:\n|$)/);
+    if (messageMatch?.[1]) {
+      message = messageMatch[1].trim();
+    }
+
+    // 4. Date & Time (depuis Slack event)
+    const datetime = new Date(event.ts * 1000);
+    const date = datetime.toISOString().split('T')[0];
+    const time = datetime.toISOString().split('T')[1].split('.')[0];
+
+    console.log(`✅ Lead: ${email} | Campaign: ${campagne} | Message: ${message} | ${date} ${time}`);
 
     if (email && campagne !== 'Unknown') {
       try {
         await supabase.from('leads').insert({
           email,
           campagne,
-          datetime: new Date(event.ts * 1000).toISOString(),
+          message: message || null,
+          datetime: datetime.toISOString(),
           slack_message_id: event.ts,
           slack_channel_id: event.channel,
         });
 
-        console.log(`✅ SAVED: ${email} | ${campagne}`);
+        console.log(`💾 Saved!`);
       } catch (err) {
-        console.error('❌ Error:', err.message);
+        console.error('❌', err.message);
       }
     }
   }
