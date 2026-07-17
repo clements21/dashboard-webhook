@@ -1,13 +1,15 @@
-console.log('🔧 SUPABASE_URL:', process.env.SUPABASE_URL ? 'OK ✓' : 'MISSING ❌');
-console.log('🔧 SUPABASE_KEY:', process.env.SUPABASE_KEY ? 'OK ✓' : 'MISSING ❌');
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+console.log('🔧 SUPABASE_URL:', process.env.SUPABASE_URL ? 'OK ✓' : 'MISSING ❌');
+console.log('🔧 SUPABASE_KEY:', process.env.SUPABASE_KEY ? 'OK ✓' : 'MISSING ❌');
 
 export default async function handler(req, res) {
+  // Créer le client DANS la fonction
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+  );
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -44,6 +46,8 @@ export default async function handler(req, res) {
 
     if (email) {
       try {
+        console.log('💾 Tentative de sauvegarde...');
+
         const { data, error } = await supabase
           .from('leads')
           .insert({
@@ -55,13 +59,13 @@ export default async function handler(req, res) {
           });
 
         if (error) {
-          console.error('❌ DB Error:', error.message);
+          console.error('❌ DB Error:', error.message, error.code);
           throw error;
         }
 
-        console.log(`✅ Saved: ${email} | ${campagne}`);
+        console.log(`✅ SUCCÈS: ${email} | ${campagne}`);
       } catch (err) {
-        console.error('Error saving to Supabase:', err.message);
+        console.error('❌ Error saving to Supabase:', err.message);
       }
     } else {
       console.log('⚠️ No email found in message');
