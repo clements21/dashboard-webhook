@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-console.log('🔧 SUPABASE_URL:', process.env.SUPABASE_URL ? 'OK ✓' : 'MISSING ❌');
-console.log('🔧 SUPABASE_KEY:', process.env.SUPABASE_KEY ? 'OK ✓' : 'MISSING ❌');
+console.log('🔧 SUPABASE OK:', process.env.SUPABASE_URL ? '✓' : '❌');
 
 export default async function handler(req, res) {
-  // Créer le client DANS la fonction
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_KEY
@@ -21,54 +19,40 @@ export default async function handler(req, res) {
 
   const { type, challenge, event } = body;
 
-  console.log('📨 Event reçu:', type);
-
-  // Slack URL verification
   if (type === 'url_verification') {
-    console.log('✓ Challenge reçu');
     return res.json({ challenge });
   }
 
-  // Process message
   if (event?.type === 'message' && !event.bot_id) {
     const text = event.text || '';
-    console.log('📝 Message text:', text);
-
-    // Extract email (n'importe quel format)
+    
+    // Extract email
     const emailMatch = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
     const email = emailMatch?.[1];
 
-    // Extract campaign: cherche "Campaign:" puis la ligne avec les guillemets
-    const campaignMatch = text.match(/Campaign:\s*\n\s*"([^"]+)"/m);
-    const campagne = campaignMatch?.[1]?.trim() || 'Unknown';
+    // Extract campaign - cherche tout ce qui est entre "Campaign:" et la fin ou la prochaine balise
+    let campagne = 'Unknown';
+    const campaignMatch = text.match(/Campaign:\s*\n?\s*"?([^"\n]+)"?/);
+    if (campaignMatch?.[1]) {
+      campagne = campaignMatch[1].trim();
+    }
 
-    console.log(`🔍 Parsed: email=${email}, campaign=${campagne}`);
+    console.log(`📧 ${email} | ${campagne}`);
 
-    if (email) {
+    if (email && campagne !== 'Unknown') {
       try {
-        console.log('💾 Tentative de sauvegarde...');
+        await supabase.from('leads').insert({
+          email,
+          campagne,
+          datetime: new Date(event.ts * 1000).toISOString(),
+          slack_message_id: event.ts,
+          slack_channel_id: event.channel,
+        });
 
-        const { data, error } = await supabase
-          .from('leads')
-          .insert({
-            email,
-            campagne,
-            datetime: new Date(event.ts * 1000).toISOString(),
-            slack_message_id: event.ts,
-            slack_channel_id: event.channel,
-          });
-
-        if (error) {
-          console.error('❌ DB Error:', error.message, error.code);
-          throw error;
-        }
-
-        console.log(`✅ SUCCÈS: ${email} | ${campagne}`);
+        console.log(`✅ SAVED: ${email} | ${campagne}`);
       } catch (err) {
-        console.error('❌ Error saving to Supabase:', err.message);
+        console.error('❌ Error:', err.message);
       }
-    } else {
-      console.log('⚠️ No email found in message');
     }
   }
 
