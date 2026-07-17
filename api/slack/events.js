@@ -17,17 +17,28 @@ export default async function handler(req, res) {
 
   const { type, challenge, event } = body;
 
+  console.log('📨 Event reçu:', type);
+
+  // Slack URL verification
   if (type === 'url_verification') {
+    console.log('✓ Challenge reçu');
     return res.json({ challenge });
   }
 
+  // Process message
   if (event?.type === 'message' && !event.bot_id) {
     const text = event.text || '';
+    console.log('📝 Message text:', text);
+
+    // Extract email (n'importe quel format)
     const emailMatch = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
     const email = emailMatch?.[1];
-    
-    const campaignMatch = text.match(/\*Campaign:\*\s*"([^"]+)"/);
-    const campagne = campaignMatch?.[1] || 'Unknown';
+
+    // Extract campaign entre "Campaign:" et la ligne suivante
+    const campaignMatch = text.match(/Campaign:\s*"?([^"\n]+)"?/);
+    const campagne = campaignMatch?.[1]?.trim() || 'Unknown';
+
+    console.log(`🔍 Parsed: email=${email}, campaign=${campagne}`);
 
     if (email) {
       try {
@@ -41,11 +52,17 @@ export default async function handler(req, res) {
             slack_channel_id: event.channel,
           });
 
-        if (error) throw error;
-        console.log(`✓ Lead saved: ${email} | ${campagne}`);
+        if (error) {
+          console.error('❌ DB Error:', error.message);
+          throw error;
+        }
+
+        console.log(`✅ Saved: ${email} | ${campagne}`);
       } catch (err) {
-        console.error('Error:', err.message);
+        console.error('Error saving to Supabase:', err.message);
       }
+    } else {
+      console.log('⚠️ No email found in message');
     }
   }
 
